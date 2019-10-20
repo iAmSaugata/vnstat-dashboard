@@ -19,12 +19,18 @@
 
 // Require includes
 require __DIR__ . '/vendor/autoload.php';
-require __DIR__ . '/includes/vnstat.php';
 require __DIR__ . '/includes/utilities.php';
+require __DIR__ . '/includes/vnstat.php';
 require __DIR__ . '/includes/config.php';
 
+if (isset($vnstat_config)) {
+    $vnstat_cmd = $vnstat_bin_dir.' --config '.$vnstat_config;
+} else {
+    $vnstat_cmd = $vnstat_bin_dir;
+}
+
 // Initiaite vnStat class
-$vnstat = new vnStat($vnstat_bin_dir);
+$vnstat = new vnStat($vnstat_cmd);
 
 // Initiate Smarty
 $smarty = new Smarty();
@@ -55,9 +61,15 @@ if (isset($_GET['i'])) {
 $smarty->assign('current_interface', $thisInterface);
 
 // Assign interface options
-$smarty->assign('interface_list', $vnstat->getInterfaces());
+$smarty->assign('interface_list', $interface_list);
+
+// JsonVersion
+$smarty->assign('jsonVersion', $vnstat->getVnstatJsonVersion());
 
 // Populate table data
+$fiveData = $vnstat->getInterfaceData('five', 'table', $thisInterface);
+$smarty->assign('fiveTableData', $fiveData);
+
 $hourlyData = $vnstat->getInterfaceData('hourly', 'table', $thisInterface);
 $smarty->assign('hourlyTableData', $hourlyData);
 
@@ -71,17 +83,23 @@ $top10Data = $vnstat->getInterfaceData('top10', 'table', $thisInterface);
 $smarty->assign('top10TableData', $top10Data);
 
 // Populate graph data
+if ($vnstat->getVnstatJsonVersion() > 1) {
+    $fiveGraphData = $vnstat->getInterfaceData('five', 'graph', $thisInterface);
+    $smarty->assign('fiveGraphData', $fiveGraphData);
+    $smarty->assign('fiveLargestPrefix', $fiveGraphData[0]['delimiter']);
+}
+
 $hourlyGraphData = $vnstat->getInterfaceData('hourly', 'graph', $thisInterface);
 $smarty->assign('hourlyGraphData', $hourlyGraphData);
-$smarty->assign('hourlyLargestPrefix', $hourlyGraphData[1]['delimiter']);
+$smarty->assign('hourlyLargestPrefix', $hourlyGraphData[0]['delimiter']);
 
 $dailyGraphData = $vnstat->getInterfaceData('daily', 'graph', $thisInterface);
 $smarty->assign('dailyGraphData', $dailyGraphData);
-$smarty->assign('dailyLargestPrefix', $dailyGraphData[1]['delimiter']);
+$smarty->assign('dailyLargestPrefix', $dailyGraphData[0]['delimiter']);
 
 $monthlyGraphData = $vnstat->getInterfaceData('monthly', 'graph', $thisInterface);
 $smarty->assign('monthlyGraphData', $monthlyGraphData);
-$smarty->assign('monthlyLargestPrefix', $monthlyGraphData[1]['delimiter']);
+$smarty->assign('monthlyLargestPrefix', $monthlyGraphData[0]['delimiter']);
 
 // Display the page
 $smarty->display('templates/site_index.tpl');
